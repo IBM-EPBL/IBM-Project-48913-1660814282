@@ -1,1 +1,0 @@
-A python app is created to run the image processing model and view the output.

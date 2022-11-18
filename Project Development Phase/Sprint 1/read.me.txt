@@ -1,1 +1,0 @@
-Dataset was made with five classes of fruits (i.e)Apple, Banana, Orange, Pineapple, Watermelon.
