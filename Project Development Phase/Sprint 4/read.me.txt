@@ -1,1 +1,0 @@
-At this phase all the html pages, style sheets and app .py are compliled with a simple login interface to make the model run and view the results(i.e nutrition of the  fruit)
