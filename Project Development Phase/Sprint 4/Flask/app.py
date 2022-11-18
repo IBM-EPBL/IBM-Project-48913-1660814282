@@ -1,0 +1,114 @@
+from flask import Flask,render_template,request,redirect,g,request,session,url_for
+# Flask-It is our framework which we are going to use to run/serve our application.
+#request-for accessing file which was uploaded by the user on our application.
+import tensorflow as tf
+import os
+import numpy as np #used for numerical analysis
+from tensorflow.keras.models import load_model#to load our trained model
+from tensorflow.keras.preprocessing import image
+import requests
+from PIL import Image
+
+app = Flask(__name__,template_folder="templates") # initializing a flask app
+# Loading the model
+model=load_model("D:\AI nutrition analyzer\Flask\saved_model.h5")
+print("Loaded model from disk")
+
+class User:
+    def __init__(self, id, username, password):
+        self.id = id
+        self.username = username
+        self.password = password
+
+    def __repr__(self):
+        return f'<User: {self.username}>'
+
+users = []
+users.append(User(id=1, username='Yogesh', password='yogesh123'))
+users.append(User(id=2, username='Ganesh', password='ganesh123'))
+users.append(User(id=3, username='venkat', password='venkat'))
+
+
+app = Flask(__name__)
+app.secret_key = 'somesecretkeythatonlyishouldknow'
+
+@app.before_request
+def before_request():
+    g.user = None
+
+    if 'user_id' in session:
+        user = [x for x in users if x.id == session['user_id']][0]
+        g.user = user
+        
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        session.pop('user_id', None)
+
+        username = request.form['username']
+        password = request.form['password']
+        
+        user = [x for x in users if x.username == username][0]
+        if user and user.password == password:
+            session['user_id'] = user.id
+            return redirect(url_for('home'))
+
+        return redirect(url_for('login'))
+
+    return render_template('login.html')
+    
+@app.route('/home')# route to display the home page
+def home():
+    if not g.user:
+        return redirect(url_for('login'))
+
+    return render_template('home.html')#rendering the home page
+
+@app.route('/image1',methods=['GET','POST'])# routes to the index html
+def image1():
+    return render_template("image.html")
+
+@app.route('/predict',methods=['GET', 'POST'])# route to show the predictions in a web UI
+def launch():
+    if request.method=='POST':
+        f=request.files['file'] #requesting the file
+        basepath=os.path.dirname('__file__')#storing the file directory
+        filepath=os.path.join(basepath,r"C:\Users\alfac\OneDrive\Desktop\AI nutrition analyzer\Flask\uploads",f.filename)#storing the file in uploads folder
+        f.save(filepath)#saving the file
+        
+        img=image.load_img(filepath,target_size=(64,64)) #load and reshaping the image
+        x=image.img_to_array(img)#converting image to an array
+        x=np.expand_dims(x,axis=0)#changing the dimensions of the image__init__
+
+        pred=np.argmax(model.predict(x), axis=1)
+        print("prediction",pred)#printing the prediction
+        index=['APPLES','BANANA','ORANGE','PINEAPPLE','WATERMELON']
+        
+        result=str(index[pred[0]])
+                    
+        x=result
+        print(x)
+        result=nutrition(result)
+        print(result)
+        
+        return render_template("result.html",showcase=(result),showcase1=(x))
+def nutrition(index):
+
+
+    url = "https://calorieninjas.p.rapidapi.com/v1/nutrition"
+    
+    querystring = {"query":index}
+    
+    headers = {
+        'x-rapidapi-key': 'f162f31fa2mshea65fd3f1d29094p16dba6jsn50c59cc02a64',
+        'x-rapidapi-host': 'calorieninjas.p.rapidapi.com'
+        }
+    
+    response = requests.request("GET", url, headers=headers, params=querystring)
+    
+    print(response.text)     
+    return response.json()['items']
+if __name__ == "__main__":
+   # running the app
+    app.run(debug=False)
